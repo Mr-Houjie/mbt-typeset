@@ -1,0 +1,9 @@
+import {
+  "Mr-Houjie/mbt-typeset" @lib,
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x/fs",
+  "moonbitlang/x/sys",
+}
+
+pkgtype(kind: "executable")
