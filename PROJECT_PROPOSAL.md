@@ -1,10 +1,10 @@
-# 2026 MoonBit 国产基础软件开源大赛 项目申报书
+# MoonBit九月黑客松 项目申报书
 
 ## 一、项目名称与 GitHub 仓库
 
 - **项目名称**：mbt-typeset（基于 MoonBit 的中文排版校对工具）
 - **GitHub 仓库**：https://github.com/Mr-Houjie/mbt-typeset
-- **许可证**：Apache-2.0 ｜ **语言**：MoonBit ≥ 0.1.20260904
+- **许可证**：MIT ｜ **语言**：MoonBit ≥ 0.1.20260904
 
 ## 二、项目简介
 
