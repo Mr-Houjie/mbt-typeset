@@ -1,0 +1,13 @@
+{
+  "markdown": true,
+  "maxLineLength": 120,
+  "rules": {
+    "halfwidth-punct-in-latin": true,
+    "consecutive-spaces": false
+  },
+  "terminology": {
+    "moonbit": "MoonBit",
+    "javascript": "JavaScript",
+    "阿发": "Alpha"
+  }
+}
