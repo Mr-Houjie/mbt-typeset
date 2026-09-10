@@ -1,0 +1,6 @@
+import {
+  "Mr-Houjie/mbt-typeset" @lib,
+  "moonbitlang/x/sys",
+}
+
+pkgtype(kind: "executable")
