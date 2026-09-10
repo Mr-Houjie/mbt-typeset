@@ -6,7 +6,7 @@ readme = "README.md"
 
 repository = "https://github.com/Mr-Houjie/mbt-typeset"
 
-license = "Apache-2.0"
+license = "MIT"
 
 keywords = [
   "chinese",
