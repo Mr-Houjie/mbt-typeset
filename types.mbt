@@ -7,6 +7,12 @@ pub enum Severity {
 } derive(Eq, Debug)
 
 ///|
+pub extend Severity with Eq::{not_equal, equal}
+
+///|
+pub extend Severity with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// 规则元信息，用于 `--list-rules` 与配置校验。
 pub struct RuleInfo {
   /// 规则 id，例如 `cjk-latin-space`
@@ -19,6 +25,12 @@ pub struct RuleInfo {
   /// 是否支持 `--fix` 自动修复
   fixable : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend RuleInfo with Eq::{not_equal, equal}
+
+///|
+pub extend RuleInfo with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// 一条排版诊断。
@@ -45,6 +57,12 @@ pub struct Diagnostic {
 } derive(Eq, Debug)
 
 ///|
+pub extend Diagnostic with Eq::{not_equal, equal}
+
+///|
+pub extend Diagnostic with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// 一次自动修复的结果。
 pub struct FixOutcome {
   /// 修复后的文本
@@ -54,3 +72,9 @@ pub struct FixOutcome {
   /// 修复后仍然存在、但无法自动修复的诊断
   remaining : Array[Diagnostic]
 } derive(Eq, Debug)
+
+///|
+pub extend FixOutcome with Eq::{not_equal, equal}
+
+///|
+pub extend FixOutcome with @moonbitlang/core/debug.Debug::{to_repr}

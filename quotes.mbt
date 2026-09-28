@@ -6,6 +6,12 @@ pub enum QuoteKind {
 } derive(Eq, Debug)
 
 ///|
+pub extend QuoteKind with Eq::{not_equal, equal}
+
+///|
+pub extend QuoteKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// 一次引号替换编辑。
 pub struct QuoteEdit {
   /// 全文字符偏移（闭端）
@@ -17,6 +23,12 @@ pub struct QuoteEdit {
   /// 是否为开引号
   opening : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend QuoteEdit with Eq::{not_equal, equal}
+
+///|
+pub extend QuoteEdit with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// 未配对的引号。
@@ -31,6 +43,12 @@ pub struct UnpairedQuote {
 } derive(Eq, Debug)
 
 ///|
+pub extend UnpairedQuote with Eq::{not_equal, equal}
+
+///|
+pub extend UnpairedQuote with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// 一行的引号扫描结果。
 pub struct QuoteScan {
   /// 需要替换的引号编辑，按位置升序
@@ -38,6 +56,9 @@ pub struct QuoteScan {
   /// 扫描过程中发现的未配对引号
   unpaired : Array[UnpairedQuote]
 } derive(Debug)
+
+///|
+pub extend QuoteScan with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// 判断是否为直引号（`"` 或 `'`）。

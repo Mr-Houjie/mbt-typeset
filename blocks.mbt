@@ -14,6 +14,12 @@ pub enum BlockKind {
 } derive(Eq, Debug)
 
 ///|
+pub extend BlockKind with Eq::{not_equal, equal}
+
+///|
+pub extend BlockKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// 列表标记。
 pub enum ListMarker {
   /// 无序标记：`-` `*` `+`
@@ -21,6 +27,12 @@ pub enum ListMarker {
   /// 有序标记：`.` 或 `)`
   Ordered(Char)
 } derive(Eq, Debug)
+
+///|
+pub extend ListMarker with Eq::{not_equal, equal}
+
+///|
+pub extend ListMarker with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// 一个块级元素（以行为单位）。
@@ -41,6 +53,12 @@ pub struct Block {
   /// 表格列数；非表格行为 0
   columns : Int
 } derive(Eq, Debug)
+
+///|
+pub extend Block with Eq::{not_equal, equal}
+
+///|
+pub extend Block with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// 计算行首缩进宽度，`tab` 记为 4 列。

@@ -15,6 +15,9 @@ pub struct Config {
 } derive(Debug)
 
 ///|
+pub extend Config with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// 内置术语表：小写形式 -> 权威写法。
 ///
 /// 只收录「几乎不会误伤」的专有名词，避免把普通英文单词也一起改了。

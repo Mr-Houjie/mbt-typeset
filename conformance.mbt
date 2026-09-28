@@ -27,6 +27,12 @@ pub struct Case {
 } derive(Eq, Debug)
 
 ///|
+pub extend Case with Eq::{not_equal, equal}
+
+///|
+pub extend Case with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// 构造一条用例（只有前 3 个参数必填）。
 fn mk(
   name : String,
