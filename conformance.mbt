@@ -51,7 +51,9 @@ pub fn conformance_cases() -> Array[Case] {
     ]),
     mk("cjk-digit", "共3个", "共 3 个", rules=["cjk-latin-space"]),
     mk("cjk-already-spaced", "使用 MoonBit 开发", "使用 MoonBit 开发"),
-    mk("cjk-inline-code", "使用`code`开发", "使用`code`开发"),
+    mk("cjk-inline-code", "使用`code`开发", "使用 `code` 开发", rules=[
+      "inline-code-space",
+    ]),
     // 全角标点
     mk("fullwidth", "你好,世界!", "你好，世界！", rules=[
       "fullwidth-punct",
@@ -231,6 +233,39 @@ pub fn conformance_cases() -> Array[Case] {
       "## 标题。\n",
       "## 标题\n",
       rules=["heading-trailing-punct"],
+      markdown=true,
+    ),
+    // 第三批规则：Markdown 结构与间距
+    mk("inline-code-spaced", "使用 `code` 开发", "使用 `code` 开发"),
+    mk(
+      "list-marker",
+      "- 甲\n- 乙\n* 丙\n",
+      "- 甲\n- 乙\n- 丙\n",
+      rules=["list-marker-consistency"],
+      markdown=true,
+    ),
+    mk(
+      "table-columns",
+      "| a | b |\n| --- |\n",
+      "| a | b |\n| --- |\n",
+      rules=["table-separator"],
+      markdown=true,
+    ),
+    mk(
+      "link-bare",
+      "[https://x.com](https://x.com)",
+      "<https://x.com>",
+      rules=["link-bare"],
+      markdown=true,
+    ),
+    mk("emoji-space", "完成✅很好", "完成 ✅ 很好", rules=[
+      "emoji-space",
+    ]),
+    mk(
+      "image-alt",
+      "![](a.png)",
+      "![](a.png)",
+      rules=["image-alt"],
       markdown=true,
     ),
     // 换行与边界

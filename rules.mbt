@@ -1104,6 +1104,66 @@ fn rule_set() -> Array[Rule] {
       },
       check: fn(ctx) { check_heading_trailing_punct(ctx) },
     },
+    {
+      info: {
+        id: "list-marker-consistency",
+        description: "同文档内列表标记保持一致",
+        severity: Info,
+        enabled_by_default: true,
+        fixable: true,
+      },
+      check: fn(ctx) { check_list_marker_consistency(ctx) },
+    },
+    {
+      info: {
+        id: "table-separator",
+        description: "表格分隔行列数与表头一致",
+        severity: Warning,
+        enabled_by_default: true,
+        fixable: false,
+      },
+      check: fn(ctx) { check_table_separator(ctx) },
+    },
+    {
+      info: {
+        id: "link-bare",
+        description: "链接文字与地址相同时可简写为 <地址>",
+        severity: Info,
+        enabled_by_default: true,
+        fixable: true,
+      },
+      check: fn(ctx) { check_link_bare(ctx) },
+    },
+    {
+      info: {
+        id: "inline-code-space",
+        description: "行内代码与中文之间加空格",
+        severity: Info,
+        enabled_by_default: true,
+        fixable: true,
+      },
+      check: fn(ctx) { check_inline_code_space(ctx) },
+    },
+    {
+      info: {
+        id: "emoji-space",
+        description: "emoji 与中文之间加空格",
+        severity: Info,
+        enabled_by_default: true,
+        fixable: true,
+      },
+      check: fn(ctx) { check_emoji_space(ctx) },
+    },
+    {
+      info: {
+        id: "image-alt",
+        description: "Markdown 图片应提供 alt 文本",
+        severity: Warning,
+        enabled_by_default: true,
+        fixable: false,
+      },
+      check: fn(ctx) { check_image_alt(ctx) },
+    },
   ]
 }
 
@@ -1334,4 +1394,279 @@ fn check_heading_trailing_punct(ctx : Ctx) -> Array[Diagnostic] {
     }
   }
   out
+}
+
+///|
+/// 判断是否为 emoji 字符。
+///
+/// 覆盖常见表情符号区段；不追求完整 Unicode 覆盖，只用于排版间距提示。
+pub fn is_emoji(c : Char) -> Bool {
+  let n = c.to_int()
+  (n >= 0x1F300 && n <= 0x1FAFF) ||
+  (n >= 0x1F000 && n <= 0x1F2FF) ||
+  (n >= 0x2600 && n <= 0x27BF) ||
+  (n >= 0x2190 && n <= 0x21FF) ||
+  n == 0x2B50 ||
+  n == 0x2B55 ||
+  n == 0x203C ||
+  n == 0x2049
+}
+
+///|
+/// 判断是否为变体选择符（U+FE0E / U+FE0F），常紧跟 emoji。
+pub fn is_variation_selector(c : Char) -> Bool {
+  let n = c.to_int()
+  n == 0xFE0E || n == 0xFE0F
+}
+
+///|
+/// 规则 `list-marker-consistency`：同一文档内的无序列表标记应保持一致。
+fn check_list_marker_consistency(ctx : Ctx) -> Array[Diagnostic] {
+  let mut dash = 0
+  let mut star = 0
+  let mut plus = 0
+  for line in ctx.lines {
+    if line.code {
+      continue
+    }
+    match list_marker_of(line.chars) {
+      Some(Bullet('-')) => dash = dash + 1
+      Some(Bullet('*')) => star = star + 1
+      Some(Bullet('+')) => plus = plus + 1
+      _ => ()
+    }
+  }
+  let mut best = '-'
+  let mut best_count = dash
+  if star > best_count {
+    best = '*'
+    best_count = star
+  }
+  if plus > best_count {
+    best = '+'
+    best_count = plus
+  }
+  let out : Array[Diagnostic] = []
+  if best_count < 2 {
+    return out
+  }
+  for line in ctx.lines {
+    if line.code {
+      continue
+    }
+    match list_marker_of(line.chars) {
+      Some(Bullet(c)) =>
+        if c != best {
+          let i = first_non_space(line.chars)
+          out.push(
+            mk_diag(
+              "list-marker-consistency",
+              Info,
+              "列表标记不统一，建议统一使用「" +
+              best.to_string() +
+              "」",
+              line.start + i,
+              line.start + i + 1,
+              Some(best.to_string()),
+            ),
+          )
+        }
+      _ => ()
+    }
+  }
+  out
+}
+
+///|
+/// 规则 `table-separator`：表格分隔行的列数应与表头一致。
+fn check_table_separator(ctx : Ctx) -> Array[Diagnostic] {
+  let blocks = build_blocks(ctx)
+  let out : Array[Diagnostic] = []
+  for i = 0; i + 1 < blocks.length(); i = i + 1 {
+    if blocks[i].kind == TableRow && blocks[i + 1].kind == TableSeparator {
+      let head = blocks[i].columns
+      let sep = blocks[i + 1].columns
+      if head != sep {
+        out.push(
+          mk_diag(
+            "table-separator",
+            Warning,
+            "表格分隔行有 " +
+            sep.to_string() +
+            " 列，与表头的 " +
+            head.to_string() +
+            " 列不一致",
+            blocks[i + 1].start,
+            blocks[i + 1].end,
+            None,
+          ),
+        )
+      }
+    }
+  }
+  out
+}
+
+///|
+/// 规则 `link-bare`：链接文字与地址相同时，可简写为 `<地址>`。
+fn check_link_bare(ctx : Ctx) -> Array[Diagnostic] {
+  scan_lines(ctx, fn(line, out) {
+    let chars = line.chars
+    let n = chars.length()
+    let mut i = 0
+    while i < n {
+      if chars[i] != '[' {
+        i = i + 1
+        continue
+      }
+      let mut j = i + 1
+      while j < n && chars[j] != ']' {
+        j = j + 1
+      }
+      if j + 1 < n && chars[j + 1] == '(' {
+        let mut k = j + 2
+        while k < n && chars[k] != ')' {
+          k = k + 1
+        }
+        if k < n {
+          let text = chars_to_string(chars, i + 1, j)
+          let url = chars_to_string(chars, j + 2, k)
+          if text != "" && text == url {
+            out.push(
+              mk_diag(
+                "link-bare",
+                Info,
+                "链接文字与地址相同，可简写为 <" + url + ">",
+                line.start + i,
+                line.start + k + 1,
+                Some("<" + url + ">"),
+              ),
+            )
+          }
+          i = k + 1
+          continue
+        }
+      }
+      i = j + 1
+    }
+  })
+}
+
+///|
+/// 规则 `inline-code-space`：行内代码与中文之间应有空格。
+fn check_inline_code_space(ctx : Ctx) -> Array[Diagnostic] {
+  scan_lines(ctx, fn(line, out) {
+    let n = line.chars.length()
+    for i = 0; i + 1 < n; i = i + 1 {
+      // 中文 + 行内代码起点
+      if !line.is_protected(i) &&
+        line.is_protected(i + 1) &&
+        line.chars[i + 1] == '`' &&
+        is_cjk_ideograph(line.chars[i]) {
+        out.push(
+          mk_diag(
+            "inline-code-space",
+            Info,
+            "行内代码与中文之间应加空格",
+            line.start + i + 1,
+            line.start + i + 1,
+            Some(" "),
+          ),
+        )
+      }
+      // 行内代码终点 + 中文
+      if line.is_protected(i) &&
+        !line.is_protected(i + 1) &&
+        line.chars[i] == '`' &&
+        is_cjk_ideograph(line.chars[i + 1]) {
+        out.push(
+          mk_diag(
+            "inline-code-space",
+            Info,
+            "行内代码与中文之间应加空格",
+            line.start + i + 1,
+            line.start + i + 1,
+            Some(" "),
+          ),
+        )
+      }
+    }
+  })
+}
+
+///|
+/// 规则 `emoji-space`：emoji 与中文之间应有空格。
+fn check_emoji_space(ctx : Ctx) -> Array[Diagnostic] {
+  scan_lines(ctx, fn(line, out) {
+    let n = line.chars.length()
+    for i = 0; i + 1 < n; i = i + 1 {
+      if line.is_protected(i) || line.is_protected(i + 1) {
+        continue
+      }
+      let a = line.chars[i]
+      let b = line.chars[i + 1]
+      let boundary = (is_emoji(a) && is_cjk_ideograph(b)) ||
+        (is_cjk_ideograph(a) && is_emoji(b))
+      // emoji 后面的变体选择符不打断判断
+      let via_selector = i + 2 < n &&
+        is_variation_selector(b) &&
+        is_cjk_ideograph(line.chars[i + 2])
+      if boundary {
+        out.push(
+          mk_diag(
+            "emoji-space",
+            Info,
+            "emoji 与中文之间应加空格",
+            line.start + i + 1,
+            line.start + i + 1,
+            Some(" "),
+          ),
+        )
+      } else if via_selector && is_emoji(a) {
+        out.push(
+          mk_diag(
+            "emoji-space",
+            Info,
+            "emoji 与中文之间应加空格",
+            line.start + i + 2,
+            line.start + i + 2,
+            Some(" "),
+          ),
+        )
+      }
+    }
+  })
+}
+
+///|
+/// 规则 `image-alt`：Markdown 图片应提供替代文本。
+fn check_image_alt(ctx : Ctx) -> Array[Diagnostic] {
+  scan_lines(ctx, fn(line, out) {
+    let chars = line.chars
+    let n = chars.length()
+    let mut i = 0
+    while i + 1 < n {
+      if chars[i] == '!' && chars[i + 1] == '[' {
+        let mut j = i + 2
+        while j < n && chars[j] != ']' {
+          j = j + 1
+        }
+        if j < n && j == i + 2 {
+          out.push(
+            mk_diag(
+              "image-alt",
+              Warning,
+              "图片缺少替代文本（alt）",
+              line.start + i,
+              line.start + j + 1,
+              None,
+            ),
+          )
+        }
+        i = j + 1
+      } else {
+        i = i + 1
+      }
+    }
+  })
 }

@@ -504,3 +504,58 @@ test "rules: 全角字母数字在纯英文段落不受影响" {
     assert_true(d.rule != "fullwidth-alnum")
   }
 }
+
+///|
+test "rules: 行内代码与 emoji 间距" {
+  let config = @Mr-Houjie/mbt-typeset.Config::new()
+  assert_eq(
+    @Mr-Houjie/mbt-typeset.fix("使用`code`开发", config).output,
+    "使用 `code` 开发",
+  )
+  assert_eq(
+    @Mr-Houjie/mbt-typeset.fix("完成✅很好", config).output,
+    "完成 ✅ 很好",
+  )
+  assert_true(@Mr-Houjie/mbt-typeset.is_emoji('✅'))
+  assert_false(@Mr-Houjie/mbt-typeset.is_emoji('A'))
+}
+
+///|
+test "rules: 列表标记一致性" {
+  let config = @Mr-Houjie/mbt-typeset.Config::new()
+  assert_eq(
+    @Mr-Houjie/mbt-typeset.fix("- 甲\n- 乙\n* 丙\n", config).output,
+    "- 甲\n- 乙\n- 丙\n",
+  )
+}
+
+///|
+test "rules: 表格列数不一致可检出" {
+  let config = @Mr-Houjie/mbt-typeset.Config::markdown()
+  let diags = @Mr-Houjie/mbt-typeset.lint("| a | b |\n| --- |\n", config)
+  let mut found = false
+  for d in diags {
+    if d.rule == "table-separator" {
+      found = true
+      assert_true(d.replacement is None)
+    }
+  }
+  assert_true(found)
+}
+
+///|
+test "rules: 裸链接简写与图片 alt" {
+  let config = @Mr-Houjie/mbt-typeset.Config::markdown()
+  assert_eq(
+    @Mr-Houjie/mbt-typeset.fix("[https://x.com](https://x.com)", config).output,
+    "<https://x.com>",
+  )
+  let img = @Mr-Houjie/mbt-typeset.lint("![](a.png)", config)
+  let mut alt = false
+  for d in img {
+    if d.rule == "image-alt" {
+      alt = true
+    }
+  }
+  assert_true(alt)
+}
