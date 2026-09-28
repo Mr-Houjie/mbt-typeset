@@ -166,6 +166,31 @@ pub fn conformance_cases() -> Array[Case] {
     mk("disable-rule", "使用MoonBit", "使用MoonBit", disable=[
       "cjk-latin-space",
     ]),
+    // 引号
+    mk("curly-double", "他说\"你好\"", "他说“你好”", rules=[
+      "curly-quote",
+    ]),
+    mk("curly-single", "中文'引号'", "中文‘引号’", rules=[
+      "curly-quote",
+    ]),
+    mk("curly-nested", "他说\"她喊'喂'\"", "他说“她喊‘喂’”", rules=[
+      "curly-quote",
+    ]),
+    mk("curly-apostrophe", "don't 不变", "don't 不变"),
+    mk("curly-english", "the \"best\" practice", "the \"best\" practice"),
+    mk("curly-already", "他说“你好”", "他说“你好”"),
+    mk("curly-multiline", "\"跨行\n引号\"", "“跨行\n引号”", rules=[
+      "curly-quote",
+    ]),
+    mk(
+      "curly-inline-code",
+      "执行 `echo \"hi\"` 命令",
+      "执行 `echo \"hi\"` 命令",
+      markdown=true,
+    ),
+    mk("curly-pairing", "这里有\"未闭合", "这里有“未闭合", rules=[
+      "quote-pairing",
+    ]),
     // 换行与边界
     mk("crlf", "使用MoonBit\r\n", "使用 MoonBit\r\n"),
     mk("empty", "", ""),

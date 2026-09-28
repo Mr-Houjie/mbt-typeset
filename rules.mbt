@@ -1024,5 +1024,25 @@ fn rule_set() -> Array[Rule] {
       },
       check: fn(ctx) { check_line_length(ctx) },
     },
+    {
+      info: {
+        id: "curly-quote",
+        description: "中文语境中的直引号改为弯引号",
+        severity: Warning,
+        enabled_by_default: true,
+        fixable: true,
+      },
+      check: fn(ctx) { check_curly_quote(ctx) },
+    },
+    {
+      info: {
+        id: "quote-pairing",
+        description: "引号必须成对出现",
+        severity: Warning,
+        enabled_by_default: true,
+        fixable: false,
+      },
+      check: fn(ctx) { check_quote_pairing(ctx) },
+    },
   ]
 }

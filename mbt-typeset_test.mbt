@@ -290,3 +290,108 @@ test "config: Markdown 模式默认值" {
   config.set_markdown(true)
   assert_true(config.markdown)
 }
+
+///|
+test "quotes: 中文语境直引号转弯引号" {
+  assert_eq(
+    @Mr-Houjie/mbt-typeset.convert_straight_quotes("他说\"你好\""),
+    "他说“你好”",
+  )
+  assert_eq(
+    @Mr-Houjie/mbt-typeset.convert_straight_quotes("中文'引号'"),
+    "中文‘引号’",
+  )
+}
+
+///|
+test "quotes: 撇号与纯英文段落不受影响" {
+  assert_eq(
+    @Mr-Houjie/mbt-typeset.convert_straight_quotes("don't 不变"),
+    "don't 不变",
+  )
+  assert_eq(
+    @Mr-Houjie/mbt-typeset.convert_straight_quotes("the \"best\" practice"),
+    "the \"best\" practice",
+  )
+}
+
+///|
+test "quotes: 嵌套引号方向正确" {
+  assert_eq(
+    @Mr-Houjie/mbt-typeset.convert_straight_quotes("他说\"她喊'喂'\""),
+    "他说“她喊‘喂’”",
+  )
+}
+
+///|
+test "quotes: 跨行引号可正确配对" {
+  assert_eq(
+    @Mr-Houjie/mbt-typeset.convert_straight_quotes("\"跨行\n引号\""),
+    "“跨行\n引号”",
+  )
+}
+
+///|
+test "quotes: 已是弯引号时保持原样" {
+  let text = "他说“你好”"
+  assert_eq(@Mr-Houjie/mbt-typeset.convert_straight_quotes(text), text)
+}
+
+///|
+test "quotes: 未配对引号可被检出" {
+  let unpaired = @Mr-Houjie/mbt-typeset.find_unpaired_quotes(
+    "这里有\"未闭合",
+  )
+  assert_eq(unpaired.length(), 1)
+  assert_true(unpaired[0].opening)
+  assert_eq(unpaired[0].kind.label(), "双引号")
+  assert_eq(unpaired[0].start, 3)
+  let balanced = @Mr-Houjie/mbt-typeset.find_unpaired_quotes("他说\"你好\"")
+  assert_eq(balanced.length(), 0)
+}
+
+///|
+test "quotes: 行内代码中的引号受保护" {
+  let text = "执行 `echo \"hi\"` 命令"
+  let config = @Mr-Houjie/mbt-typeset.Config::markdown()
+  let diags = @Mr-Houjie/mbt-typeset.lint(text, config)
+  for d in diags {
+    assert_true(d.rule != "curly-quote")
+  }
+  assert_eq(@Mr-Houjie/mbt-typeset.fix(text, config).output, text)
+}
+
+///|
+test "quotes: quote-pairing 报告但不可自动修复" {
+  let diags = @Mr-Houjie/mbt-typeset.lint(
+    "这里有\"未闭合",
+    @Mr-Houjie/mbt-typeset.Config::new(),
+  )
+  let mut found = false
+  for d in diags {
+    if d.rule == "quote-pairing" {
+      found = true
+      assert_true(d.replacement is None)
+    }
+  }
+  assert_true(found)
+}
+
+///|
+test "quotes: 规则元信息已注册" {
+  let mut curly = false
+  let mut pairing = false
+  for info in @Mr-Houjie/mbt-typeset.rule_infos() {
+    if info.id == "curly-quote" {
+      curly = true
+      assert_true(info.fixable)
+      assert_true(info.enabled_by_default)
+    }
+    if info.id == "quote-pairing" {
+      pairing = true
+      assert_false(info.fixable)
+    }
+  }
+  assert_true(curly)
+  assert_true(pairing)
+}
