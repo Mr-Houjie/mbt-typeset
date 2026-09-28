@@ -210,6 +210,29 @@ pub fn conformance_cases() -> Array[Case] {
       "- 第一项\n\n  续行使用 MoonBit",
       markdown=true,
     ),
+    // 第二批规则：内容与结构
+    mk("fullwidth-alnum", "版本Ｖ２发布", "版本 V2 发布", rules=[
+      "fullwidth-alnum",
+    ]),
+    mk("number-range", "第1～3章", "第 1~3 章", rules=["number-range"]),
+    mk("percent-sign", "占比 50 %", "占比 50%", rules=["percent-sign"]),
+    mk("blank-lines", "甲\n\n\n\n乙", "甲\n\n乙", rules=[
+      "blank-line-collapse",
+    ]),
+    mk(
+      "heading-jump",
+      "# 一\n\n### 三\n",
+      "# 一\n\n### 三\n",
+      rules=["heading-level-jump"],
+      markdown=true,
+    ),
+    mk(
+      "heading-punct",
+      "## 标题。\n",
+      "## 标题\n",
+      rules=["heading-trailing-punct"],
+      markdown=true,
+    ),
     // 换行与边界
     mk("crlf", "使用MoonBit\r\n", "使用 MoonBit\r\n"),
     mk("empty", "", ""),

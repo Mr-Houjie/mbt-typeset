@@ -1044,5 +1044,294 @@ fn rule_set() -> Array[Rule] {
       },
       check: fn(ctx) { check_quote_pairing(ctx) },
     },
+    {
+      info: {
+        id: "fullwidth-alnum",
+        description: "中文语境中的全角字母数字改为半角",
+        severity: Warning,
+        enabled_by_default: true,
+        fixable: true,
+      },
+      check: fn(ctx) { check_fullwidth_alnum(ctx) },
+    },
+    {
+      info: {
+        id: "number-range",
+        description: "数字区间号统一为半角 ~",
+        severity: Info,
+        enabled_by_default: true,
+        fixable: true,
+      },
+      check: fn(ctx) { check_number_range(ctx) },
+    },
+    {
+      info: {
+        id: "percent-sign",
+        description: "百分号与数字之间不应有空格",
+        severity: Warning,
+        enabled_by_default: true,
+        fixable: true,
+      },
+      check: fn(ctx) { check_percent_sign(ctx) },
+    },
+    {
+      info: {
+        id: "blank-line-collapse",
+        description: "连续空行压缩为 1 个",
+        severity: Info,
+        enabled_by_default: true,
+        fixable: true,
+      },
+      check: fn(ctx) { check_blank_line_collapse(ctx) },
+    },
+    {
+      info: {
+        id: "heading-level-jump",
+        description: "Markdown 标题层级不应跳跃",
+        severity: Warning,
+        enabled_by_default: true,
+        fixable: false,
+      },
+      check: fn(ctx) { check_heading_level_jump(ctx) },
+    },
+    {
+      info: {
+        id: "heading-trailing-punct",
+        description: "标题末尾不应有句读标点",
+        severity: Info,
+        enabled_by_default: true,
+        fixable: true,
+      },
+      check: fn(ctx) { check_heading_trailing_punct(ctx) },
+    },
   ]
+}
+
+// ---------------------------------------------------------------------------
+// 第二批规则：内容规范与结构规范
+// ---------------------------------------------------------------------------
+
+///|
+/// 全角字母 / 数字 -> 半角 ASCII（`Ａ` → `A`、`０` → `0`）。
+///
+/// 全角形式与对应的 ASCII 码点相差固定值 `0xFEE0`。
+pub fn fullwidth_alnum_to_ascii(c : Char) -> Char? {
+  let n = c.to_int()
+  let is_upper = n >= 0xFF21 && n <= 0xFF3A
+  let is_lower = n >= 0xFF41 && n <= 0xFF5A
+  let is_digit = n >= 0xFF10 && n <= 0xFF19
+  if is_upper || is_lower || is_digit {
+    Some((n - 0xFEE0).unsafe_to_char())
+  } else {
+    None
+  }
+}
+
+///|
+/// 判断是否为全角区间号候选（`～` `－` `—`）。
+fn is_fullwidth_range_separator(c : Char) -> Bool {
+  match c {
+    '～' | '－' | '—' => true
+    _ => false
+  }
+}
+
+///|
+/// 判断是否为标题末尾不应出现的标点。
+fn is_heading_trailing_punct(c : Char) -> Bool {
+  match c {
+    '。' | '，' | '、' | '；' | '.' | ',' | ';' => true
+    _ => false
+  }
+}
+
+///|
+/// 规则 `fullwidth-alnum`：中文语境中的全角字母数字改为半角。
+fn check_fullwidth_alnum(ctx : Ctx) -> Array[Diagnostic] {
+  scan_lines(ctx, fn(line, out) {
+    let n = line.chars.length()
+    for i = 0; i < n; i = i + 1 {
+      if line.is_protected(i) {
+        continue
+      }
+      match fullwidth_alnum_to_ascii(line.chars[i]) {
+        Some(half) =>
+          if has_cjk_nearby(line.chars, i, 6) {
+            out.push(
+              mk_diag(
+                "fullwidth-alnum",
+                Warning,
+                "中文语境中的全角字符「" +
+                line.chars[i].to_string() +
+                "」应改为半角",
+                line.start + i,
+                line.start + i + 1,
+                Some(half.to_string()),
+              ),
+            )
+          }
+        None => ()
+      }
+    }
+  })
+}
+
+///|
+/// 规则 `number-range`：数字区间号统一为半角 `~`。
+fn check_number_range(ctx : Ctx) -> Array[Diagnostic] {
+  scan_lines(ctx, fn(line, out) {
+    let n = line.chars.length()
+    for i = 1; i < n - 1; i = i + 1 {
+      if line.is_protected(i) {
+        continue
+      }
+      if is_fullwidth_range_separator(line.chars[i]) &&
+        line.chars[i - 1].is_ascii_digit() &&
+        line.chars[i + 1].is_ascii_digit() {
+        out.push(
+          mk_diag(
+            "number-range",
+            Info,
+            "数字区间号应使用半角「~」，此处为「" +
+            line.chars[i].to_string() +
+            "」",
+            line.start + i,
+            line.start + i + 1,
+            Some("~"),
+          ),
+        )
+      }
+    }
+  })
+}
+
+///|
+/// 规则 `percent-sign`：百分号与数字之间不应有空格。
+fn check_percent_sign(ctx : Ctx) -> Array[Diagnostic] {
+  scan_lines(ctx, fn(line, out) {
+    let n = line.chars.length()
+    for i = 0; i < n; i = i + 1 {
+      if line.is_protected(i) || line.chars[i] != '%' {
+        continue
+      }
+      let mut j = i
+      while j > 0 && is_space_char(line.chars[j - 1]) {
+        j = j - 1
+      }
+      if j < i && j > 0 && line.chars[j - 1].is_ascii_digit() {
+        out.push(
+          mk_diag(
+            "percent-sign",
+            Warning,
+            "百分号与数字之间不应有空格",
+            line.start + j,
+            line.start + i + 1,
+            Some("%"),
+          ),
+        )
+      }
+    }
+  })
+}
+
+///|
+/// 规则 `blank-line-collapse`：连续 3 个以上空行压缩为 1 个。
+fn check_blank_line_collapse(ctx : Ctx) -> Array[Diagnostic] {
+  let lines = ctx.lines
+  let out : Array[Diagnostic] = []
+  let mut i = 0
+  while i < lines.length() {
+    if lines[i].code || !is_blank_line(lines[i].chars) {
+      i = i + 1
+      continue
+    }
+    let mut j = i
+    while j < lines.length() && !lines[j].code && is_blank_line(lines[j].chars) {
+      j = j + 1
+    }
+    let run = j - i
+    if run >= 3 {
+      let last = j - 1
+      let start = lines[i + 1].start
+      let end = if j < lines.length() {
+        lines[j].start
+      } else {
+        lines[last].start + lines[last].chars.length()
+      }
+      if end > start {
+        out.push(
+          mk_diag(
+            "blank-line-collapse",
+            Info,
+            "连续空行过多，已压缩为 1 个空行",
+            start,
+            end,
+            Some(""),
+          ),
+        )
+      }
+    }
+    i = j
+  }
+  out
+}
+
+///|
+/// 规则 `heading-level-jump`：标题层级应逐级递进，不应跳级。
+fn check_heading_level_jump(ctx : Ctx) -> Array[Diagnostic] {
+  let out : Array[Diagnostic] = []
+  let mut prev_level = 0
+  for b in build_blocks(ctx) {
+    if b.kind == Heading {
+      if prev_level > 0 && b.level > prev_level + 1 {
+        out.push(
+          mk_diag(
+            "heading-level-jump",
+            Warning,
+            "标题层级跳跃：从 h" +
+            prev_level.to_string() +
+            " 直接到 h" +
+            b.level.to_string(),
+            b.start,
+            b.end,
+            None,
+          ),
+        )
+      }
+      prev_level = b.level
+    }
+  }
+  out
+}
+
+///|
+/// 规则 `heading-trailing-punct`：标题末尾不应有句读标点。
+fn check_heading_trailing_punct(ctx : Ctx) -> Array[Diagnostic] {
+  let out : Array[Diagnostic] = []
+  for line in ctx.lines {
+    if line.code {
+      continue
+    }
+    if heading_level_of(line.chars) == 0 {
+      continue
+    }
+    let n = line.chars.length()
+    if n == 0 {
+      continue
+    }
+    let last = line.chars[n - 1]
+    if is_heading_trailing_punct(last) {
+      out.push(
+        mk_diag(
+          "heading-trailing-punct",
+          Info,
+          "标题末尾不应有标点「" + last.to_string() + "」",
+          line.start + n - 1,
+          line.start + n,
+          Some(""),
+        ),
+      )
+    }
+  }
+  out
 }

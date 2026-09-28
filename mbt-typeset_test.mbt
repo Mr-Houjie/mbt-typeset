@@ -446,3 +446,61 @@ test "blocks: 分割线与缩进宽度" {
   assert_eq(blocks[1].kind.label(), "列表项")
   assert_eq(blocks[3].kind.label(), "分割线")
 }
+
+///|
+test "rules: 全角字母数字映射" {
+  assert_eq(@Mr-Houjie/mbt-typeset.fullwidth_alnum_to_ascii('Ａ'), Some('A'))
+  assert_eq(@Mr-Houjie/mbt-typeset.fullwidth_alnum_to_ascii('ｚ'), Some('z'))
+  assert_eq(@Mr-Houjie/mbt-typeset.fullwidth_alnum_to_ascii('７'), Some('7'))
+  assert_true(@Mr-Houjie/mbt-typeset.fullwidth_alnum_to_ascii('中') is None)
+}
+
+///|
+test "rules: 第二批规则可检出并修复" {
+  let config = @Mr-Houjie/mbt-typeset.Config::new()
+  let cases : Array[(String, String, String)] = [
+    ("版本Ａ１", "版本 A1", "fullwidth-alnum"),
+    ("第1～3章", "第 1~3 章", "number-range"),
+    ("占比 50 %", "占比 50%", "percent-sign"),
+    ("甲\n\n\n\n乙", "甲\n\n乙", "blank-line-collapse"),
+  ]
+  for c in cases {
+    let (input, expected, rule) = c
+    let diags = @Mr-Houjie/mbt-typeset.lint(input, config)
+    let mut found = false
+    for d in diags {
+      if d.rule == rule {
+        found = true
+      }
+    }
+    assert_true(found)
+    assert_eq(@Mr-Houjie/mbt-typeset.fix(input, config).output, expected)
+  }
+}
+
+///|
+test "rules: 标题层级跳跃与标题末尾标点" {
+  let config = @Mr-Houjie/mbt-typeset.Config::markdown()
+  let jump = @Mr-Houjie/mbt-typeset.lint("# 一\n\n### 三\n", config)
+  let mut has_jump = false
+  for d in jump {
+    if d.rule == "heading-level-jump" {
+      has_jump = true
+      assert_true(d.replacement is None)
+    }
+  }
+  assert_true(has_jump)
+  assert_eq(
+    @Mr-Houjie/mbt-typeset.fix("## 标题。\n", config).output,
+    "## 标题\n",
+  )
+}
+
+///|
+test "rules: 全角字母数字在纯英文段落不受影响" {
+  let config = @Mr-Houjie/mbt-typeset.Config::new()
+  let diags = @Mr-Houjie/mbt-typeset.lint("ＨＥＬＬＯ", config)
+  for d in diags {
+    assert_true(d.rule != "fullwidth-alnum")
+  }
+}
