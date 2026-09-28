@@ -395,3 +395,54 @@ test "quotes: 规则元信息已注册" {
   assert_true(curly)
   assert_true(pairing)
 }
+
+///|
+test "blocks: 基本块级分类" {
+  let blocks = @Mr-Houjie/mbt-typeset.analyze_blocks(
+    "# 标题\n\n正文\n\n- 列表\n\n> 引用\n\n```\ncode\n```\n", true,
+  )
+  assert_eq(blocks[0].kind.label(), "标题")
+  assert_eq(blocks[0].level, 1)
+  assert_eq(blocks[2].kind.label(), "段落")
+  assert_eq(blocks[4].kind.label(), "列表项")
+  assert_eq(blocks[6].kind.label(), "引用块")
+  assert_eq(blocks[8].kind.label(), "围栏代码块")
+}
+
+///|
+test "blocks: 缩进代码块被识别且不参与检查" {
+  let blocks = @Mr-Houjie/mbt-typeset.analyze_blocks(
+    "正文\n\n    缩进代码\n", true,
+  )
+  assert_eq(blocks[2].kind.label(), "缩进代码块")
+  let diags = @Mr-Houjie/mbt-typeset.lint(
+    "正文\n\n    缩进代码里的\"引号\"\n",
+    @Mr-Houjie/mbt-typeset.Config::markdown(),
+  )
+  for d in diags {
+    assert_true(d.rule != "curly-quote")
+  }
+}
+
+///|
+test "blocks: 表格列数与分隔行" {
+  let blocks = @Mr-Houjie/mbt-typeset.analyze_blocks(
+    "| a | b |\n| --- | --- |\n| 1 | 2 |\n", true,
+  )
+  assert_eq(blocks[0].kind.label(), "表格行")
+  assert_eq(blocks[0].columns, 2)
+  assert_eq(blocks[1].kind.label(), "表格分隔行")
+  assert_eq(blocks[2].kind.label(), "表格行")
+}
+
+///|
+test "blocks: 分割线与缩进宽度" {
+  assert_eq(@Mr-Houjie/mbt-typeset.indent_width("    x".iter().to_array()), 4)
+  assert_eq(@Mr-Houjie/mbt-typeset.indent_width("\tx".iter().to_array()), 4)
+  let blocks = @Mr-Houjie/mbt-typeset.analyze_blocks(
+    "- 项目\n* 项目\n\n---\n", true,
+  )
+  assert_eq(blocks[0].kind.label(), "列表项")
+  assert_eq(blocks[1].kind.label(), "列表项")
+  assert_eq(blocks[3].kind.label(), "分割线")
+}

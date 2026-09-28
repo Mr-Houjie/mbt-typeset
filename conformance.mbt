@@ -191,6 +191,25 @@ pub fn conformance_cases() -> Array[Case] {
     mk("curly-pairing", "这里有\"未闭合", "这里有“未闭合", rules=[
       "quote-pairing",
     ]),
+    // 缩进代码块
+    mk(
+      "indented-code",
+      "正文\n\n    使用MoonBit代码\n\n正文使用MoonBit",
+      "正文\n\n    使用MoonBit代码\n\n正文使用 MoonBit",
+      markdown=true,
+    ),
+    mk(
+      "indented-code-quotes",
+      "正文使用MoonBit\n\n    代码里的\"引号\"\n",
+      "正文使用 MoonBit\n\n    代码里的\"引号\"\n",
+      markdown=true,
+    ),
+    mk(
+      "indented-lookalike-list",
+      "- 第一项\n\n  续行使用MoonBit",
+      "- 第一项\n\n  续行使用 MoonBit",
+      markdown=true,
+    ),
     // 换行与边界
     mk("crlf", "使用MoonBit\r\n", "使用 MoonBit\r\n"),
     mk("empty", "", ""),

@@ -292,6 +292,8 @@ fn scan_source(source : String, markdown : Bool) -> ScanResult {
   let mut fence : Char? = None
   let mut fence_line = 0
   let mut in_front_matter = false
+  // 上一行是否为空行（文档开头视作空行），用于识别缩进代码块
+  let mut prev_blank = true
   let mut k = 0
   while k < raws.length() {
     let raw = raws[k]
@@ -325,12 +327,17 @@ fn scan_source(source : String, markdown : Bool) -> ScanResult {
           }
       }
     }
+    // 缩进代码块：紧跟在空行之后、缩进 >= 4 的行
+    if !code && markdown && prev_blank && is_indented_code_line(raw.chars) {
+      code = true
+    }
     let mask = if code {
       Array::make(raw.chars.length(), true)
     } else {
       build_mask(raw.chars)
     }
     out.push(SLine::{ chars: raw.chars, start: offset, code, mask, })
+    prev_blank = is_blank_line(raw.chars)
     offset = offset + raw.chars.length() + raw.newline.length()
     k = k + 1
   }
