@@ -45,7 +45,7 @@ $ mbt-typeset --markdown --fix 文档.md
 
 ## 特性
 
-- **16 条排版规则**，覆盖间距、标点、术语、Markdown 结构四大类
+- **30 条排版规则**，覆盖间距、标点、引号、术语、Markdown 结构五大类
 - **一键自动修复**，满足幂等性：修完再修不会产生新改动
 - **Markdown 感知**：自动跳过代码围栏、行内代码、链接地址、URL、前置元数据（front matter）
 - **三种输出格式**：`text`（人读）、`json`（机器读）、`github`（Actions 注解）
@@ -58,16 +58,30 @@ $ mbt-typeset --markdown --fix 文档.md
 | --- | --- | --- | --- |
 | `cjk-latin-space` | 开 | 是 | 中文与英文、数字之间插入空格 |
 | `fullwidth-punct` | 开 | 是 | 中文语境中的半角标点改为全角 |
+| `fullwidth-alnum` | 开 | 是 | 中文语境中的全角字母数字改为半角 |
+| `curly-quote` | 开 | 是 | 中文语境中的直引号改为弯引号 |
+| `quote-pairing` | 开 | 否 | 引号必须成对出现 |
 | `duplicate-punct` | 开 | 是 | 重复标点只保留一个 |
 | `ellipsis` | 开 | 是 | 省略号统一为「……」 |
 | `dash` | 开 | 是 | 中文破折号统一为「——」 |
+| `number-range` | 开 | 是 | 数字区间号统一为半角 `~` |
 | `space-around-punct` | 开 | 是 | 全角标点周围不应有多余空格 |
 | `number-unit-space` | 开 | 是 | 数字与单位之间插入空格 |
+| `percent-sign` | 开 | 是 | 百分号与数字之间不应有空格 |
 | `terminology` | 开 | 是 | 术语大小写与写法统一（如 `github` → `GitHub`） |
 | `trailing-whitespace` | 开 | 是 | 行尾不应有多余空白 |
+| `blank-line-collapse` | 开 | 是 | 连续空行压缩为 1 个 |
 | `heading-space` | 开 | 是 | Markdown 标题的 `#` 之后应有空格 |
+| `heading-level-jump` | 开 | 否 | Markdown 标题层级不应跳跃 |
+| `heading-trailing-punct` | 开 | 是 | 标题末尾不应有句读标点 |
 | `list-marker-space` | 开 | 是 | Markdown 列表标记之后应有空格 |
+| `list-marker-consistency` | 开 | 是 | 同文档内列表标记保持一致 |
 | `blockquote-space` | 开 | 是 | Markdown 引用块的 `>` 之后应有空格 |
+| `table-separator` | 开 | 否 | 表格分隔行列数与表头一致 |
+| `link-bare` | 开 | 是 | 链接文字与地址相同时可简写为 `<地址>` |
+| `image-alt` | 开 | 否 | Markdown 图片应提供 alt 文本 |
+| `inline-code-space` | 开 | 是 | 行内代码与中文之间加空格 |
+| `emoji-space` | 开 | 是 | emoji 与中文之间加空格 |
 | `unclosed-code-fence` | 开 | 否 | Markdown 代码围栏未闭合（error 级） |
 | `halfwidth-punct-in-latin` | 关 | 是 | 英文语境中的全角标点改为半角 |
 | `consecutive-spaces` | 关 | 是 | 正文中不应出现连续空格 |
@@ -210,7 +224,7 @@ moon test
 
 测试分两层：
 
-- **一致性语料**（`conformance.mbt`）：45 条「输入 → 期望输出」用例，是全部规则的单一事实来源；
+- **一致性语料**（`conformance.mbt`）：69 条「输入 → 期望输出」用例，是全部规则的单一事实来源；
   每条用例都会校验 `lint` 报告了期望的规则、`fix` 的结果等于期望文本、并对结果再跑一次 `fix` 确认幂等。
 - **黑盒单元测试**（`mbt-typeset_test.mbt`）：只通过公开 API 覆盖位置计算、保护掩码、渲染输出、规则表、配置等细节。
 
@@ -218,7 +232,7 @@ moon test
 
 ```bash
 moon run cmd/verify
-# mbt-typeset 自检：共 45 条用例，失败 0 条
+# mbt-typeset 自检：共 69 条用例，失败 0 条
 # 全部通过
 ```
 
@@ -232,7 +246,9 @@ mbt-typeset/
 ├── types.mbt          # Diagnostic、Severity、RuleInfo、FixOutcome
 ├── config.mbt         # 运行配置与内置术语表
 ├── segment.mbt        # 扫描：切行、识别代码区域、构造逐字符「保护掩码」
-├── rules.mbt          # 16 条规则 + 规则注册表
+├── blocks.mbt         # 块级分析：标题 / 列表 / 表格 / 缩进代码块
+├── quotes.mbt         # 引号配对状态机与中文弯引号转换
+├── rules.mbt          # 30 条规则 + 规则注册表
 ├── engine.mbt         # lint / fix（迭代到不动点）+ 位置计算
 ├── render.mbt         # text / json / github 渲染 + 规则表
 ├── conformance.mbt    # 一致性语料 + 自检入口
